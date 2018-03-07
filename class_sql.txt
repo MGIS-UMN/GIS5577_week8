@@ -1,0 +1,70 @@
+SELECT rid, ST_MakePoint( (ST_Metadata(r.rast)).upperleftx, (ST_Metadata(r.rast)).upperlefty ) as geom
+FROM glc2000_us r 
+LIMIT 3
+
+SELECT ST_DumpValues(r.rast)
+FROM glc2000_us r 
+LIMIT 3
+
+raster2pgsql -C -x -I -Y -F -l 2,4,8,16,32 -s 4326 -t 250x250 C:\work\GIS5577_week8\glc2000_clipped_nodata.tif glc2000_us_nodata1 | psql -h gis5777.csaba3m4f8xj.us-east-1.rds.amazonaws.com -d classroom -U student
+
+WITH dataset as
+(
+SELECT rid, (ST_ValueCount(r.rast)).*
+FROM states p, glc2000_us_nodata r
+WHERE lower(p.name) = 'minnesota' AND ST_Intersects(r.rast,p.geom)
+-- AND rid = 13
+)
+SELECT rid, max(value)
+From dataset
+GROUP by rid
+
+
+SELECT rid, (ST_SummaryStats(ST_Clip(r.rast, p.geom))).max as rast
+FROM states p, glc2000_us_nodata r
+WHERE lower(p.name) = 'minnesota' AND ST_Intersects(r.rast,p.geom)
+
+
+SELECT p.name, (ST_SummaryStats(ST_Union(ST_Clip(r.rast, p.geom)))).max as rast
+FROM states p, glc2000_us_nodata r
+WHERE ST_Intersects(r.rast,p.geom)
+GROUP BY p.name
+
+SELECT p.name, 
+(ST_SummaryStatsAgg(ST_Clip(r.rast,p.geom),1,True)).min
+FROM us_counties p, glc2000_us_nodata r
+WHERE ST_Intersects(r.rast,p.geom)
+GROUP BY p.name
+LIMIT 1
+
+
+raster2pgsql -C -x -I -Y -F -s 4326 -t 250x250 C:\work\GIS5577_week8\meris_2010_clipped_nodata.tif meris_2010_us_nodata | psql -h gis5777.csaba3m4f8xj.us-east-1.rds.amazonaws.com -d classroom -U student
+
+raster2pgsql -C -x -I -Y -F -s 4326 -t 250x250 C:\work\GIS5577_week8\meris_2015_clipped_nodata.tif meris_2015_us_nodata | psql -h gis5777.csaba3m4f8xj.us-east-1.rds.amazonaws.com -d classroom -U student
+
+SELECT p.name, 
+(ST_SummaryStatsAgg(ST_Clip(r1.rast,p.geom),1,True)).*,
+(ST_SummaryStatsAgg(ST_Clip(r2.rast,p.geom),1,True)).*
+FROM states p
+INNER JOIN meris_2010_us_nodata r1 ON ST_Intersects(r1.rast,p.geom)
+INNER JOIN meris_2015_us_nodata r2 ON ST_Intersects(r2.rast,p.geom)
+GROUP BY p.name
+LIMIT 5
+-- AND rid
+
+WITH point as
+(
+SELECT ST_SETSRID(  ST_MakeLine(
+ ST_MakePoint(-97.239,(43.499+((49.384-43.499)/2))),
+ST_MakePoint(-89.492,(43.499+((49.384-43.499)/2)))  ),4326 ) as geom,
+
+ST_Makeline(ST_GeomFromText('POINT( -97.237 46.4415)',4326), ST_GeomFromText('POINT( -89.492 46.4415)',4326)) as line
+), polygon_dump as
+(
+SELECT (ST_Dump(ST_Split(s.geom, p.line))).*
+FROM states s 
+INNER JOIN point p on ST_Intersects(s.geom, p.line)
+WHERE lower(s.name) = 'minnesota'
+)
+SELECT unnest(path), geom
+FROM polygon_dump
