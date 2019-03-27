@@ -20,14 +20,12 @@ The purpose of this weeks lecture is to beginn understanding how to use PostGIS 
 
 
 ### Tips
-1. ```
-(ST_Clip(rast, geom)- Requires raster field/column, geometry field/column```
+1. ```(ST_Clip(rast, geom)- Requires raster field/column, geometry field/column```
 
 1. ```ST_SummaryStatsAgg(rast,1, True) - Requires raster field/column, rasterband_num, Boolean (noData)```
 
 1. ```(ST_SummaryStatsAgg((ST_Clip(r.rast, p.geom),1,True))).* - Same requirements as above, but unpacks the record type```
 
-1. ```ST_Reclass(rast, 1, '12:1', '8BUI')  - Requires raster field/column, rasterband_num, value map, pixel type
-``` 
+1. ```ST_Reclass(rast, 1, '12:1', '8BUI')  - Requires raster field/column, rasterband_num, value map, pixel type``` 
 
 
