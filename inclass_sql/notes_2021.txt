@@ -1,0 +1,146 @@
+raster2pgsql 
+
+-I -C -Y -s 4326 -t 250x250
+
+C:\git\GIS5577_week8\tiffs\glc20000_clipped_nodata.tif 
+
+glc2000_v2 
+
+>  ## Save to a file
+ |  ## pipe directly to psql
+ 
+ psql -h 129.114.17.71 -d classroom -U david
+ 
+ 
+ 
+raster2pgsql -I -C -Y -s 4326 -t 250x250 C:\git\GIS5577_week8\tiffs\glc2000_clipped_nodata.tif  glc2000_v2  |  psql -h 129.114.17.71 -d classroom -U david
+
+raster2pgsql -I -C -Y -s 4326 -t 250x250 C:\git\GIS5577_week8\tiffs\meris_2010_clipped_nodata.tif  meris_2010  |  psql -h 129.114.17.71 -d classroom -U david
+
+raster2pgsql -I -C -Y -s 4326 -t 250x250 C:\git\GIS5577_week8\tiffs\meris_2015_clipped_nodata.tif  meris_2015  |  psql -h 129.114.17.71 -d classroom -U david
+
+
+-- Separate the values for MN vs WI
+
+with rastvalues as
+(
+select p.name, r.rid, ST_Envelope(rast) as raster_bound
+	-- , p.geom, (ST_Valuecount(ST_Clip(r.rast,p.geom))).*
+	-- ,ST_Envelope(ST_Clip(r.rast,p.geom)) as new_boundary
+	, (ST_Valuecount(ST_Clip(r.rast,p.geom))).* 
+	-- returns many records per tile
+from glc2000 r
+inner join states p on ST_Intersects(r.rast, p.geom)
+-- where p.name = 'Minnesota' or p.name = 'Wisconsin' -- two places
+order by 2
+)
+select name, value, sum(count) as total_pixels
+from rastvalues
+group by name, value
+order by 1
+
+
+-- how much water is in each state
+-- We use the where clause because the ST_ValueCount makes it no longer spatial --> table
+with rastvalues as
+(
+select p.name, r.rid, ST_Envelope(rast) as raster_bound
+	-- , p.geom, (ST_Valuecount(ST_Clip(r.rast,p.geom))).*
+	 ,ST_Envelope(ST_Clip(r.rast,p.geom)) as new_boundary
+	, (ST_Valuecount(ST_Clip(r.rast,p.geom))).* 
+	-- returns many records per tile
+from glc2000 r
+inner join states p on ST_Intersects(r.rast, p.geom)
+where p.name = 'Minnesota' or p.name = 'Wisconsin' -- two places
+order by 2
+)
+select name, value, sum(count) as total_pixels
+from rastvalues
+where value <= 8
+group by name, value
+order by 1
+
+-- Reclassification
+
+with rastvalues as
+(
+select p.name, r.rid, 
+	(ST_Valuecount(ST_Reclass(r.rast, 1, '20:500', '32BSI'))).* as rast
+	--, (ST_Valuecount(r.rast)).*  --The original at to verify
+	-- , (ST_Valuecount(ST_Clip(r.rast,p.geom))).* 
+from glc2000 r
+-- inner join states p on ST_Intersects(r.rast, p.geom)
+-- where p.name = 'Minnesota' 
+order by r.rid
+)
+select name, value, sum(count) as total_pixels
+from rastvalues
+-- where value <= 8
+group by name, value
+order by 1
+
+-- Use this for checking on your metadata
+select *
+from raster_columns
+
+
+--- For Minnesota give me the unique pixel counts
+with rastvalues as
+(
+select p.name, r.rid 
+	, (ST_Valuecount(ST_Clip(r.rast,p.geom))).* 
+from meris_2010 r
+inner join states p on ST_Intersects(r.rast, p.geom)
+where p.name = 'Minnesota' 
+order by 2
+)
+select distinct value
+-- name, value, sum(count) as total_pixels
+from rastvalues
+-- group by name, value
+order by 1
+
+--Does MInnesota have more pixels of "200" 
+-- 2 common table expressions
+(
+	S  meris_2010
+	F rast_2010 INNER JOIN states
+)
+	S  meris_2015
+	F rast_2015 INNER JOIN states
+(
+	Join the table1results = table2results
+)
+
+
+select p.name
+	, (ST_Valuecount(ST_Clip(r1.rast,p.geom))).* 
+	, (ST_Valuecount(ST_Clip(r2.rast,p.geom))).* 
+from states p 
+inner join meris_2010 r1 on ST_Intersects(r1.rast, p.geom)
+inner join meris_2015 r2 on ST_Intersects(r2.rast, p.geom)
+where p.name = 'Minnesota' and (ST_Valuecount(ST_Clip(r1.rast,p.geom))).value = (ST_Valuecount(ST_Clip(r2.rast,p.geom))).value 
+
+
+
+
+select p.name,--  rid,
+	-- ST_Summarystats(ST_Clip(r1.rast,p.geom))
+	(ST_Summarystats(ST_Union(ST_Clip(r1.rast,p.geom)))).* 
+	--ST_union glues things together but is expensive
+from states p 
+inner join meris_2010 r1 on ST_Intersects(r1.rast, p.geom)
+where p.name = 'Minnesota'
+group by p.name
+
+
+select p.name,--  rid,
+	-- ST_Summarystats(ST_Clip(r1.rast,p.geom))
+	(ST_Summarystatsagg(ST_Clip(r1.rast,p.geom), 1, True)).* 
+	--Agg function is much faster and won't fail
+from states p 
+inner join meris_2010 r1 on ST_Intersects(r1.rast, p.geom)
+where p.name = 'Minnesota'
+group by p.name
+
+
