@@ -1,0 +1,24 @@
+Here is the metadata for the GLC2000 dataset
+Pixel Value GLC Global Class (according to LCCS terminology)
+1.      Tree Cover, broadleaved, evergreen LCCS >15% tree cover, tree height >3 (Examples of sub-classes at regional level* : closed > 40% tree cove; open 15-40% tree cover)
+2.      Tree Cover, broadleaved, deciduous, closed 
+3.      Tree Cover, broadleaved, deciduous, open (open 15-40% tree cover)
+4.      Tree Cover, needle-leaved, evergreen
+5.      Tree Cover, needle-leaved, deciduous
+6.      Tree Cover, mixed leaf type
+7.      Tree Cover, regularly flooded, fresh  water (& brackish)
+8.      Tree Cover, regularly flooded, saline water, (daily variation of water level)
+9.      Mosaic: Tree cover / Other natural vegetation 
+10.     Tree Cover, burnt 
+11.     Shrub Cover, closed-open, evergreen (Examples of sub-classes at reg. level *: (i) sparse tree layer)
+12.     Shrub Cover, closed-open, deciduous (Examples of sub-classes at reg. level *: (i) sparse tree layer)
+13.     Herbaceous Cover, closed-open (Examples of sub-classes at regional level *: (i) natural, (ii) pasture, (iii) sparse trees or shrubs) 
+14.     Sparse Herbaceous or sparse Shrub Cover
+15.     Regularly flooded Shrub and/or Herbaceous Cover
+16.     Cultivated and managed areas (Examples of sub-classes at reg. level *: (i) terrestrial; (ii) aquatic (=flooded during cultivation),  and under terrestrial:  (iii) tree crop & shrubs (perennial),  (iv) herbaceous crops (annual), non-irrigated, (v) herbaceous crops (annual), irrigated)    
+17.     Mosaic: Cropland / Tree Cover / Other natural vegetation
+18.     Mosaic: Cropland / Shrub or Grass Cover 
+19.     Bare Areas
+20.     Water Bodies (natural & artificial)
+21.     Snow and Ice (natural & artificial)
+22.     Artificial surfaces and associated areas
