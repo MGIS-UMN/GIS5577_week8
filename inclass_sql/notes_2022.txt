@@ -1,0 +1,240 @@
+Class notes 2022
+
+
+SELECT
+ST_Value(rast, 1, geom)
+FROM tops
+WHERE ST_Intersects(rast, 1, geom)
+
+Error message: 
+Invalid Layer: GDAL provider Cannot open GDAL dataset PG: dbname='tan00025' host=spatialdb.gisandbox.org port=5432 user='tan00025' sslmode=disable mode=2 schema='public' column='rast' table='meris_2010_clipped': Couldn't establish a database connection Raster layer Provider is not valid (provider: gdal, URI: PG: dbname='tan00025' host=spatialdb.gisandbox.org port=5432 user='tan00025' sslmode=disable mode=2 schema='public' column='rast' table='meris_2010_clipped'
+
+Invalid Layer: GDAL provider Cannot open GDAL dataset PG: dbname='marso093' host=spatialdb.gisandbox.org port=5432 mode=2 schema='public' column='rast' table='glc2000_clipped': Couldn't establish a database connection Raster layer Provider is not valid (provider: gdal, URI: PG: dbname='marso093' host=spatialdb.gisandbox.org port=5432 mode=2 schema='public' column='rast' table='glc2000_clipped'
+
+select rid, st_envelope(rast) as geom
+FROM glc2000
+
+
+http://www.postgis.us/downloads/postgis21_raster_cheatsheet.html
+
+What is the function that will get me the pixel values?
+ST_Metadata - I guess it’s not value it’s size of pixels
+
+
+Select ST_Metadata(rast)
+-- This returns a collection of columns (name)
+From glc2000 r
+
+
+Select (ST_Metadata(rast)).* 
+-- This unpacks the collection
+From glc2000 r
+
+
+Select (ST_Metadata(rast)).upperleftx 
+-- THis specifies a particular column
+From glc2000 r
+
+Select (ST_Metadata(rast)).*
+
+Select (ST_Metadata(rast)).upperleftx, (ST_Metadata(rast)).upperlefty, 
+
+These are focal functions / Note - All of these functions are edge bound. Can’t see neighboring pixels on different tiles
+ST_Distinct4ma2 
+ST_Range4ma2
+
+St_value     x 3 
+
+
+With inpoint as 
+(
+SELECT  ST_SetSRID(ST_POINT(-93.258133, 44.986656),4326) as geom
+)
+SELECT ST_Value(rast, p.geom) as the_value 
+FROM glc2000 r, inpoint p
+
+With inpoint as 
+(
+SELECT ST_SetSRID(ST_POINT(-93.258133, 44.986656),4326) as geom
+-- we created a point (yeah!)
+)
+SELECT r.rid, ST_Value(r.rast, p.geom) as the_value 
+FROM glc2000 r, inpoint p   --This is a cross join
+--1 every record = tile
+--2 every record = feature
+WHERE ST_Intersects(r.rast, p.geom)
+-- We are only returning what is true
+
+
+
+With inpoint as 
+(
+SELECT ST_SetSRID(ST_POINT(-93.258133, 44.986656),4326) as geom
+-- we created a point (yeah!)
+)
+SELECT r.rid, ST_Value(r.rast, p.geom) as the_value 
+FROM glc2000 r
+INNER JOIN inpoint p ON ST_Intersects(r.rast, p.geom)
+-- We are only returning what is true
+
+
+
+ST_ValueCount    
+
+SELECT r.rid, (ST_Valuecount(r.rast)).*
+FROM glc2000 r
+-- 2467 rows running the full table
+WHERE r.rid = 41
+-- 12 rows for just minneapolis
+
+
+with pixeldata as
+(
+SELECT r.rid, (ST_Valuecount(r.rast)).*
+FROM glc2000 r
+-- 2467 rows running the full table
+WHERE r.rid IN (39,41)
+ORDER BY 3 DESC
+-- 12 rows for just minneapolis
+)
+select *
+from pixeldata
+
+
+
+with pixeldata as
+(
+SELECT r.rid, (ST_Valuecount(r.rast)).*
+FROM glc2000 r
+-- 2467 rows running the full table
+-- WHERE r.rid IN (39,41)
+ORDER BY 3 DESC
+-- 12 rows for just minneapolis
+)
+select value, sum(count) as total_pixels
+from pixeldata
+group by value
+order by 2 desc
+
+
+
+with pixeldata as
+(
+SELECT r.rid, (ST_Valuecount(r.rast)).*
+FROM meris_2010 r
+-- 2467 rows running the full table
+-- WHERE r.rid IN (39,41)
+ORDER BY 3 DESC
+-- 12 rows for just minneapolis
+)
+select value, sum(count) as total_pixels
+from pixeldata
+group by value
+order by 2 desc
+
+
+
+
+
+select
+
+FROM glc2000 r
+INNER JOIN us_states p ON ST_INTersects(r.rast,p.geom)
+
+
+
+SELECT p.name as place_name, r.rid
+FROM glc2000 r
+INNER JOIN us_states p ON ST_Intersects(r.rast,p.geom)
+
+
+with pixeldata as
+(
+SELECT p.name as place_name, r.rid, (ST_Valuecount(ST_Clip(r.rast, p.geom))).* as rast
+-- INTO Minnesota_data
+-- ST_ValueCount()
+FROM glc2000 r
+INNER JOIN us_states p ON ST_Intersects(r.rast,p.geom)
+WHERE p.name = 'Minnesota'
+)
+select value, sum(count) as total_pixels
+from pixeldata
+group by value
+order by 2 desc
+
+
+
+
+with pixeldata as
+(
+SELECT p.name as place_name, r.rid, (ST_Valuecount(ST_Clip(r.rast, p.geom))).* as rast
+-- INTO Minnesota_data
+-- ST_ValueCount()
+FROM glc2000 r
+INNER JOIN us_states p ON ST_Intersects(r.rast,p.geom)
+-- WHERE p.name IN ('Minnesota', 'Wisconsin')
+)
+select place_name, value, sum(count) as total_pixels
+from pixeldata
+group by place_name, value
+order by 1,2 desc
+
+
+
+select r.rid, p.name, ST_SummaryStats(ST_CLIP(r.rast, p.geom)) as info
+from glc2000 r
+INNER JOIN us_states p ON ST_Intersects(r.rast, p.geom) 
+WHERE p.name = 'Minnesota'
+
+
+
+select p.name, (ST_Summarystats(ST_Union(ST_CLIP(r.rast, p.geom)))).* as rast
+-- into minnesota_1_record
+--  r.rid,
+-- (ST_SummaryStats(ST_CLIP(r.rast, p.geom))).* as info
+from glc2000 r
+INNER JOIN us_states p ON ST_Intersects(r.rast, p.geom) 
+WHERE p.name = 'Minnesota'
+GROUP BY p.name
+
+
+
+select p.name, (ST_Summarystats(ST_Union(ST_CLIP(r.rast, p.geom)))).* as rast
+-- into minnesota_1_record
+--  r.rid,
+-- (ST_SummaryStats(ST_CLIP(r.rast, p.geom))).* as info
+from glc2000 r
+INNER JOIN us_states p ON ST_Intersects(r.rast, p.geom) 
+-- WHERE p.name IN  ('Minnesota', 'California')
+GROUP BY p.name
+
+
+
+
+SELECT p.name, (ST_SummaryStatsAgg(ST_CLIP(r.rast, p.geom),1, True)).*
+FROM glc2000 r
+INNER JOIN us_states p ON ST_Intersects(r.rast, p.geom)
+GROUP BY p.name
+--12 entire us
+
+
+
+
+with pixeldata as
+(
+SELECT p.name as place_name, r.rid, 
+   (ST_Valuecount(ST_Clip(r.rast, p.geom))).* as rast,
+   (ST_Valuecount(ST_Reclass(ST_Clip(r.rast, p.geom), '22:3', '8BUI'))).* as rast2
+   
+FROM glc2000 r
+INNER JOIN us_states p ON ST_Intersects(r.rast,p.geom)
+WHERE p.name = 'Minnesota'
+)
+select * -- value, count-- sum(count) as total_pixels
+from pixeldata
+-- group by value
+order by 2 desc
+
+
+
+(ST_PixelAsPolygons()).* -- Takes a long time to run, maybe don’t do this (may crash computer…)
