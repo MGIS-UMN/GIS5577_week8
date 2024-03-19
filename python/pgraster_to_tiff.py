@@ -39,12 +39,12 @@ def WriteToFile(outFilePath, outString, writeMode='wb'):
          
          
          
-myConnection = {"host": "localhost", "db": "research", "port": 5432, "user": "david", "password": "XXX"}
+myConnection = {"host": "yourhost", "db": "yourdatabase", "port": 5432, "user": "username", "password": "XXX"}
 con = CreateConnection(myConnection)  
 
 
 cur = ExecuteQuery(con, "SELECT ST_AsTiff(rast, 'LZW') as rast from glc2000 where rid=1")
 
 for img in cur:
-    WriteToFile('c:\work\glc2000.tif', img[0], 'wb')
+    WriteToFile(r'c:\work\glc2000.tif', img[0], 'wb')
     
